@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mini Black-Jack</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(180deg, #0f172a, #111827);
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .app {
+      width: 100%;
+      max-width: 980px;
+      background: rgba(17, 24, 39, 0.95);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 24px;
+      box-shadow: 0 25px 70px rgba(0,0,0,0.45);
+      overflow: hidden;
+    }
+    .header {
+      padding: 24px;
+      background: linear-gradient(135deg, #14532d, #166534, #064e3b);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 2rem;
+    }
+    .header p {
+      margin: 8px 0 0;
+      color: #dcfce7;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 0;
+    }
+    .sidebar {
+      padding: 24px;
+      border-right: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+    }
+    .main {
+      padding: 24px;
+    }
+    .panel {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 18px;
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+    .money {
+      font-size: 2rem;
+      font-weight: bold;
+      margin: 10px 0 0;
+      color: #86efac;
+    }
+    .small {
+      color: #cbd5e1;
+      font-size: 0.95rem;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      color: white;
+      font-size: 1rem;
+      margin-bottom: 12px;
+    }
+    button {
+      width: 100%;
+      padding: 12px 14px;
+      border: none;
+      border-radius: 12px;
+      background: #16a34a;
+      color: white;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s ease;
+      margin-bottom: 10px;
+    }
+    button:hover { background: #22c55e; }
+    button.secondary { background: #334155; }
+    button.secondary:hover { background: #475569; }
+    button.danger { background: #b91c1c; }
+    button.danger:hover { background: #dc2626; }
+    button:disabled {
+      background: #475569;
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .card {
+      width: 74px;
+      height: 104px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #ffffff, #e2e8f0);
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      font-weight: bold;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.2);
+      border: 2px solid rgba(15,23,42,0.08);
+    }
+    .card.back {
+      background: linear-gradient(180deg, #1d4ed8, #1e3a8a);
+      color: white;
+    }
+    .status {
+      min-height: 90px;
+      white-space: pre-line;
+      line-height: 1.6;
+      color: #f8fafc;
+    }
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    .footer-note {
+      color: #94a3b8;
+      font-size: 0.92rem;
+      margin-top: 12px;
+    }
+    @media (max-width: 860px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <h1>Mini Black-Jack</h1>
+      <p>Deine Python-Idee als spielbare Website</p>
+    </div>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="panel">
+          <div class="small">Aktuelles Geld</div>
+          <div class="money" id="moneyDisplay">250 €</div>
+        </div>
+
+        <div class="panel" id="betPanel">
+          <label for="betInput">Wie viel möchtest du setzen?</label>
+          <input id="betInput" type="number" min="1" max="100" value="25" />
+          <button id="startRoundBtn">Runde starten</button>
+          <div class="footer-note">Erlaubt sind Einsätze von 1 € bis 100 €, aber nie mehr als dein aktuelles Geld.</div>
+        </div>
+
+        <div class="panel">
+          <div class="actions">
+            <button id="hitBtn" disabled>Karte ziehen</button>
+            <button id="standBtn" class="secondary" disabled>Stehen</button>
+            <button id="newRoundBtn" class="secondary" disabled>Neue Runde</button>
+            <button id="quitBtn" class="danger">Beenden</button>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main">
+        <div class="panel">
+          <h2>Dealer</h2>
+          <div class="small" id="dealerSum">Summe: ?</div>
+          <div class="cards" id="dealerCards"></div>
+        </div>
+
+        <div class="panel">
+          <h2>Du</h2>
+          <div class="small" id="playerSum">Summe: 0</div>
+          <div class="cards" id="playerCards"></div>
+        </div>
+
+        <div class="panel">
+          <h2>Status</h2>
+          <div class="status" id="statusBox">Willkommen zum Mini Black-Jack! Setze deinen Einsatz und starte eine Runde.</div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const karten = ["2","3","4","5","6","7","8","9","10","B","Q","K","A"];
+
+    let geld = 250;
+    let setzen = 0;
+    let spielerKarten = [];
+    let dealerKarten = [];
+    let rundeVorbei = true;
+    let dealerVersteckt = true;
+
+    const moneyDisplay = document.getElementById("moneyDisplay");
+    const betInput = document.getElementById("betInput");
+    const startRoundBtn = document.getElementById("startRoundBtn");
+    const hitBtn = document.getElementById("hitBtn");
+    const standBtn = document.getElementById("standBtn");
+    const newRoundBtn = document.getElementById("newRoundBtn");
+    const quitBtn = document.getElementById("quitBtn");
+    const dealerCardsEl = document.getElementById("dealerCards");
+    const playerCardsEl = document.getElementById("playerCards");
+    const dealerSumEl = document.getElementById("dealerSum");
+    const playerSumEl = document.getElementById("playerSum");
+    const statusBox = document.getElementById("statusBox");
+
+    function berechneSumme(hand) {
+      let summe = 0;
+      let asse = 0;
+
+      for (const karte of hand) {
+        if (karte === "A") {
+          asse += 1;
+          summe += 11;
+        } else if (["B", "Q", "K"].includes(karte)) {
+          summe += 10;
+        } else {
+          summe += parseInt(karte, 10);
+        }
+      }
+
+      while (summe > 21 && asse > 0) {
+        summe -= 10;
+        asse -= 1;
+      }
+
+      return summe;
+    }
+
+    function zieheKarte() {
+      return karten[Math.floor(Math.random() * karten.length)];
+    }
+
+    function updateMoney() {
+      moneyDisplay.textContent = `${geld} €`;
+      betInput.max = Math.min(100, geld);
+    }
+
+    function renderCards() {
+      playerCardsEl.innerHTML = "";
+      dealerCardsEl.innerHTML = "";
+
+      spielerKarten.forEach(karte => {
+        const div = document.createElement("div");
+        div.className = "card";
+        div.textContent = karte;
+        playerCardsEl.appendChild(div);
+      });
+
+      dealerKarten.forEach((karte, index) => {
+        const div = document.createElement("div");
+        if (dealerVersteckt && index === 1 && !rundeVorbei) {
+          div.className = "card back";
+          div.textContent = "?";
+        } else {
+          div.className = "card";
+          div.textContent = karte;
+        }
+        dealerCardsEl.appendChild(div);
+      });
+
+      playerSumEl.textContent = `Summe: ${berechneSumme(spielerKarten)}`;
+      if (dealerVersteckt && !rundeVorbei) {
+        dealerSumEl.textContent = `Summe: ?`;
+      } else {
+        dealerSumEl.textContent = `Summe: ${berechneSumme(dealerKarten)}`;
+      }
+    }
+
+    function setStatus(text) {
+      statusBox.textContent = text;
+    }
+
+    function setControls({ startDisabled, hitDisabled, standDisabled, newRoundDisabled }) {
+      startRoundBtn.disabled = startDisabled;
+      hitBtn.disabled = hitDisabled;
+      standBtn.disabled = standDisabled;
+      newRoundBtn.disabled = newRoundDisabled;
+      betInput.disabled = !startDisabled ? false : true;
+    }
+
+    function endeRunde(text) {
+      rundeVorbei = true;
+      dealerVersteckt = false;
+      renderCards();
+      setStatus(text);
+      hitBtn.disabled = true;
+      standBtn.disabled = true;
+      newRoundBtn.disabled = false;
+      startRoundBtn.disabled = true;
+      betInput.disabled = true;
+
+      if (geld <= 0) {
+        setStatus(text + "\n\nDu hast kein Geld mehr. Spiel vorbei!");
+        newRoundBtn.disabled = true;
+        startRoundBtn.disabled = true;
+      }
+    }
+
+    function pruefeStartBlackjack() {
+      const spielerSumme = berechneSumme(spielerKarten);
+      const dealerSumme = berechneSumme(dealerKarten);
+
+      if (spielerSumme === 21 && dealerSumme === 21) {
+        endeRunde("Unentschieden! Beide haben Blackjack!\nDein Geld bleibt unverändert: " + geld + " €");
+        return true;
+      }
+
+      if (spielerSumme === 21) {
+        geld += setzen;
+        updateMoney();
+        endeRunde("Blackjack! Du hast gewonnen!\nDein neues Geld: " + geld + " €");
+        return true;
+      }
+
+      if (dealerSumme === 21) {
+        geld -= setzen;
+        updateMoney();
+        endeRunde("Dealer hat Blackjack! Der Dealer gewinnt!\nDein neues Geld: " + geld + " €");
+        return true;
+      }
+
+      return false;
+    }
+
+    function starteRunde() {
+      setzen = parseInt(betInput.value, 10);
+
+      if (!Number.isInteger(setzen) || setzen < 1 || setzen > 100 || setzen > geld) {
+        setStatus("Ungültiger Einsatz. Wähle einen Betrag zwischen 1 € und 100 €, aber nicht mehr als dein aktuelles Geld.");
+        return;
+      }
+
+      spielerKarten = [zieheKarte(), zieheKarte()];
+      dealerKarten = [zieheKarte(), zieheKarte()];
+      rundeVorbei = false;
+      dealerVersteckt = true;
+
+      renderCards();
+      setStatus("Runde gestartet. Du kannst jetzt eine Karte ziehen oder stehen bleiben.");
+
+      startRoundBtn.disabled = true;
+      betInput.disabled = true;
+      hitBtn.disabled = false;
+      standBtn.disabled = false;
+      newRoundBtn.disabled = true;
+
+      pruefeStartBlackjack();
+    }
+
+    function karteZiehen() {
+      if (rundeVorbei) return;
+
+      const neueKarte = zieheKarte();
+      spielerKarten.push(neueKarte);
+      renderCards();
+
+      const summe = berechneSumme(spielerKarten);
+      if (summe > 21) {
+        geld -= setzen;
+        updateMoney();
+        endeRunde(`Du hast ${neueKarte} gezogen und bist bust!\nDu hast verloren.\nDein neues Geld: ${geld} €`);
+      } else {
+        setStatus(`Du hast ${neueKarte} gezogen.\nDeine neue Summe: ${summe}`);
+      }
+    }
+
+    function dealerZug() {
+      dealerVersteckt = false;
+
+      while (berechneSumme(dealerKarten) < 17) {
+        dealerKarten.push(zieheKarte());
+      }
+
+      renderCards();
+
+      const spielerSumme = berechneSumme(spielerKarten);
+      const dealerSumme = berechneSumme(dealerKarten);
+
+      if (dealerSumme > 21) {
+        geld += setzen;
+        updateMoney();
+        endeRunde("Dealer hat überkauft!\nDu hast gewonnen!\nDein neues Geld: " + geld + " €");
+      } else if (spielerSumme < dealerSumme) {
+        geld -= setzen;
+        updateMoney();
+        endeRunde("Dealer gewinnt!\nDein neues Geld: " + geld + " €");
+      } else if (spielerSumme > dealerSumme) {
+        geld += setzen;
+        updateMoney();
+        endeRunde("Du hast gewonnen!\nDein neues Geld: " + geld + " €");
+      } else {
+        endeRunde("Unentschieden!\nDein Geld bleibt unverändert: " + geld + " €");
+      }
+    }
+
+    function neueRunde() {
+      spielerKarten = [];
+      dealerKarten = [];
+      rundeVorbei = true;
+      dealerVersteckt = true;
+      dealerCardsEl.innerHTML = "";
+      playerCardsEl.innerHTML = "";
+      dealerSumEl.textContent = "Summe: ?";
+      playerSumEl.textContent = "Summe: 0";
+      setStatus("Neue Runde bereit. Setze deinen Einsatz und starte.");
+      startRoundBtn.disabled = false;
+      betInput.disabled = false;
+      hitBtn.disabled = true;
+      standBtn.disabled = true;
+      newRoundBtn.disabled = true;
+      betInput.value = Math.min(25, Math.max(1, geld));
+      updateMoney();
+    }
+
+    function beenden() {
+      hitBtn.disabled = true;
+      standBtn.disabled = true;
+      startRoundBtn.disabled = true;
+      newRoundBtn.disabled = true;
+      betInput.disabled = true;
+      setStatus("Danke fürs Spielen!\nDein Endguthaben: " + geld + " €");
+    }
+
+    startRoundBtn.addEventListener("click", starteRunde);
+    hitBtn.addEventListener("click", karteZiehen);
+    standBtn.addEventListener("click", () => {
+      if (!rundeVorbei) dealerZug();
+    });
+    newRoundBtn.addEventListener("click", () => {
+      if (geld > 0) neueRunde();
+    });
+    quitBtn.addEventListener("click", beenden);
+
+    updateMoney();
+    neueRunde();
+  </script>
+</body>
+</html>
