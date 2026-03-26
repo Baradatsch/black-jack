@@ -147,6 +147,10 @@
       font-size: 0.92rem;
       margin-top: 12px;
     }
+    #scoreboardList {
+      margin-top: 12px;
+      line-height: 1.8;
+    }
     @media (max-width: 860px) {
       .layout { grid-template-columns: 1fr; }
       .sidebar { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.08); }
@@ -181,6 +185,20 @@
             <button id="newRoundBtn" class="secondary" disabled>Neue Runde</button>
             <button id="quitBtn" class="danger">Beenden</button>
           </div>
+        </div>
+
+        <div class="panel">
+          <h2>🏆 Scoreboard</h2>
+          <label for="nameInput">Dein Name</label>
+          <input id="nameInput" type="text" placeholder="z. B. Christian" />
+
+          <div id="scoreboardList" class="small">
+            Noch keine Rekorde gespeichert.
+          </div>
+
+          <button id="resetScoreboardBtn" class="secondary" style="margin-top: 12px;">
+            Scoreboard löschen
+          </button>
         </div>
       </aside>
 
@@ -227,6 +245,9 @@
     const dealerSumEl = document.getElementById("dealerSum");
     const playerSumEl = document.getElementById("playerSum");
     const statusBox = document.getElementById("statusBox");
+    const nameInput = document.getElementById("nameInput");
+    const scoreboardList = document.getElementById("scoreboardList");
+    const resetScoreboardBtn = document.getElementById("resetScoreboardBtn");
 
     function berechneSumme(hand) {
       let summe = 0;
@@ -255,9 +276,67 @@
       return karten[Math.floor(Math.random() * karten.length)];
     }
 
+    function getScoreboard() {
+      const daten = localStorage.getItem("blackjackScoreboard");
+      return daten ? JSON.parse(daten) : {};
+    }
+
+    function renderScoreboard() {
+      const scoreboard = getScoreboard();
+      const eintraege = Object.entries(scoreboard);
+
+      if (eintraege.length === 0) {
+        scoreboardList.innerHTML = "Noch keine Rekorde gespeichert.";
+        return;
+      }
+
+      eintraege.sort((a, b) => b[1] - a[1]);
+
+      let html = "";
+      for (let i = 0; i < eintraege.length; i++) {
+        html += `${i + 1}. <strong>${eintraege[i][0]}</strong>: ${eintraege[i][1]} €<br>`;
+      }
+
+      scoreboardList.innerHTML = html;
+    }
+
+    function saveCurrentRecord() {
+      const name = nameInput.value.trim();
+
+      if (!name) return;
+
+      const scoreboard = getScoreboard();
+
+      if (!scoreboard[name] || geld > scoreboard[name]) {
+        scoreboard[name] = geld;
+        localStorage.setItem("blackjackScoreboard", JSON.stringify(scoreboard));
+      }
+
+      renderScoreboard();
+    }
+
+    function loadSavedName() {
+      const savedName = localStorage.getItem("blackjackPlayerName");
+      if (savedName) {
+        nameInput.value = savedName;
+      }
+    }
+
+    function savePlayerName() {
+      const name = nameInput.value.trim();
+      localStorage.setItem("blackjackPlayerName", name);
+      renderScoreboard();
+    }
+
+    function resetScoreboard() {
+      localStorage.removeItem("blackjackScoreboard");
+      renderScoreboard();
+    }
+
     function updateMoney() {
       moneyDisplay.textContent = `${geld} €`;
       betInput.max = Math.min(100, geld);
+      saveCurrentRecord();
     }
 
     function renderCards() {
@@ -293,14 +372,6 @@
 
     function setStatus(text) {
       statusBox.textContent = text;
-    }
-
-    function setControls({ startDisabled, hitDisabled, standDisabled, newRoundDisabled }) {
-      startRoundBtn.disabled = startDisabled;
-      hitBtn.disabled = hitDisabled;
-      standBtn.disabled = standDisabled;
-      newRoundBtn.disabled = newRoundDisabled;
-      betInput.disabled = !startDisabled ? false : true;
     }
 
     function endeRunde(text) {
@@ -438,6 +509,7 @@
     }
 
     function beenden() {
+      saveCurrentRecord();
       hitBtn.disabled = true;
       standBtn.disabled = true;
       startRoundBtn.disabled = true;
@@ -455,7 +527,11 @@
       if (geld > 0) neueRunde();
     });
     quitBtn.addEventListener("click", beenden);
+    nameInput.addEventListener("input", savePlayerName);
+    resetScoreboardBtn.addEventListener("click", resetScoreboard);
 
+    loadSavedName();
+    renderScoreboard();
     updateMoney();
     neueRunde();
   </script>
